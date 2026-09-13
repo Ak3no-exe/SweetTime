@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SweetTime</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 20% 0%,#18235a 0,#080b1d 38%,#050611 100%);color:#eef2ff;min-height:100vh}
+header{padding:26px 18px 15px;background:rgba(7,9,25,.82);border-bottom:1px solid #29336d;position:sticky;top:0;z-index:2;backdrop-filter:blur(16px)}
+h1{margin:0 0 4px;font-size:29px;letter-spacing:1px;background:linear-gradient(90deg,#8b7cff,#27e7ff);-webkit-background-clip:text;color:transparent}.sub{color:#8f9ac7;font-size:14px}
+main{max-width:920px;margin:auto;padding:20px}.tabs{display:flex;gap:8px;margin-bottom:17px;overflow:auto}
+button,.tab{border:1px solid #303b7b;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer;transition:.2s}
+.tab{background:#111632;color:#aeb8e9;white-space:nowrap}.tab.active{background:linear-gradient(135deg,#6d5dfc,#16cbea);color:#fff;border-color:transparent;box-shadow:0 0 20px #3b8cff55}
+.card{background:linear-gradient(145deg,rgba(18,23,55,.94),rgba(8,11,30,.94));border:1px solid #28346f;border-radius:20px;padding:18px;margin-bottom:16px;box-shadow:0 8px 30px #0007}
+h2{margin-top:0;font-size:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+label{display:block;font-size:13px;color:#8794c9;margin-bottom:6px}input{width:100%;padding:13px;border:1px solid #303b7b;border-radius:12px;font-size:16px;background:#080c24;color:#fff;outline:none}input:focus{border-color:#2be4ff;box-shadow:0 0 0 3px #2be4ff18}
+.primary{background:linear-gradient(135deg,#6d5dfc,#16cbea);color:white;width:100%;margin-top:13px;border:0;box-shadow:0 0 22px #456cff40}.danger{background:#321b2a;color:#ff9fbd;border-color:#69334c}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.big{font-size:29px;font-weight:850;color:#fff}.muted{color:#8995c5}.app{padding:13px 0;border-bottom:1px solid #202955}.app:last-child{border:0}
+canvas{max-height:340px}.hidden{display:none}.empty{text-align:center;padding:30px;color:#7885b4}small{color:#7885b4}
+
+.menuBtn{position:absolute;right:16px;top:22px;background:#111632;border:1px solid #344181;color:#fff;font-size:22px;padding:8px 12px;border-radius:12px}
+.drawer{position:fixed;top:0;right:-360px;width:min(360px,92vw);height:100vh;background:#090d25;border-left:1px solid #344181;z-index:10;padding:22px;transition:right .25s;box-shadow:-15px 0 40px #0009;overflow:auto}
+.drawer.open{right:0}.drawerTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.closeBtn{background:#171d3d;color:#fff;border:1px solid #344181;padding:8px 12px}
+.overlay{position:fixed;inset:0;background:#0008;z-index:9;display:none}.overlay.open{display:block}
+.adminItem{padding:13px 0;border-bottom:1px solid #222b59}.adminItem b{color:#fff}.adminItem .meta{color:#8995c5;font-size:13px;margin-top:3px}
+.del{float:right;background:#321b2a;color:#ff9fbd;border:1px solid #69334c;padding:7px 10px;border-radius:9px}
+
+.notifyBox{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:12px}
+.notifyBox>div{flex:1;min-width:150px}.notifyBtn{background:linear-gradient(135deg,#6d5dfc,#16cbea);color:white;border:0}
+.notifyStatus{font-size:13px;color:#8995c5;margin-top:8px}
+</style>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#080b1d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+</head>
+<body>
+<header><button class="menuBtn" onclick="openMenu()">☰</button><h1>◈ SweetTime</h1><div class="sub">Ton temps. Tes applis. Tes statistiques.</div></header>
+
+<div id="overlay" class="overlay" onclick="closeMenu()"></div>
+<aside id="drawer" class="drawer">
+  <div class="drawerTop"><h2>⚙ Admin</h2><button class="closeBtn" onclick="closeMenu()">✕</button></div>
+  <p class="muted">Toutes les données que tu as enregistrées.</p>
+  <div id="adminList"></div>
+<div class="card" style="margin-top:18px;background:#0d1230">
+  <h3 style="margin-top:0">🔔 Rappel quotidien</h3>
+  <div class="notifyBox">
+    <div><label>Heure du rappel</label><input id="notifyTime" type="time" value="20:00"></div>
+    <button class="notifyBtn" onclick="enableNotifications()">Activer</button>
+  </div>
+  <div id="notifyStatus" class="notifyStatus">Rappel désactivé.</div>
+</div>
+
+</aside>
+<main>
+<div class="tabs">
+<button class="tab active" onclick="setPeriod('jour',this)">Jour</button>
+<button class="tab" onclick="setPeriod('semaine',this)">Semaine</button>
+<button class="tab" onclick="setPeriod('mois',this)">Mois</button>
+<button class="tab" onclick="setPeriod('année',this)">Année</button>
+</div>
+
+<section id="entry" class="card">
+<h2>Ajouter un temps</h2>
+<div class="grid">
+<div><label>Date</label><input id="date" type="date"></div>
+<div><label>Application</label><input id="app" placeholder="Ex. TikTok"></div>
+<div><label>Heures</label><input id="hours" type="number" min="0" step="1" placeholder="1"></div><div><label>Minutes</label><input id="mins" type="number" min="0" max="59" step="1" placeholder="30"></div>
+</div>
+<button class="primary" onclick="add()">Ajouter</button>
+</section>
+
+<section class="card">
+<div class="row"><div><div class="muted" id="periodTitle">Temps du jour</div><div class="big" id="total">0 min</div></div><div><div class="muted">Moyenne / jour</div><div class="big" id="average">0 min</div></div></div>
+</section>
+
+<section class="card">
+<h2>Répartition par application</h2>
+<div id="chartEmpty" class="empty">Aucune donnée pour cette période.</div>
+<canvas id="chart"></canvas>
+</section>
+
+<section class="card">
+<h2>Détails</h2>
+<div id="details" class="empty">Ajoute des données pour commencer.</div>
+</section>
+
+
+</main>
+
+<script>
+let data=JSON.parse(localStorage.getItem('screenTime')||'[]');
+let period='jour', chart=null;
+const today=new Date();
+document.getElementById('date').value=today.toISOString().slice(0,10);
+
+function dateObj(s){let [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function startOfWeek(d){let x=new Date(d);let n=(x.getDay()+6)%7;x.setDate(x.getDate()-n);x.setHours(0,0,0,0);return x}
+function inPeriod(item){
+ let d=dateObj(item.date), selected=document.getElementById('date').value, now=new Date();
+ if(period==='jour') return item.date===selected;
+ let base=selected?dateObj(selected):now;
+ if(period==='semaine'){let s=startOfWeek(base),e=new Date(s);e.setDate(e.getDate()+7);return d>=s&&d<e}
+ if(period==='mois') return d.getFullYear()===base.getFullYear()&&d.getMonth()===base.getMonth();
+ return d.getFullYear()===base.getFullYear();
+}
+function fmt(min){min=Math.round(min);let h=Math.floor(min/60),m=min%60;return h?`${h} h ${m} min`:`${m} min`}
+function setPeriod(p,el){period=p;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');render()}
+document.getElementById('date').addEventListener('change',render);
+function add(){
+ let date=document.getElementById('date').value,app=document.getElementById('app').value.trim(),hours=Number(document.getElementById('hours').value||0),mins=Number(document.getElementById('mins').value||0),minutes=hours*60+mins;
+ if(!date||!app||minutes<=0||hours<0||mins<0||mins>59)return alert('Remplis la date, l’application, les heures et les minutes.');
+ data.push({date,app,minutes});localStorage.setItem('screenTime',JSON.stringify(data));
+ document.getElementById('app').value='';document.getElementById('hours').value='';document.getElementById('mins').value='';render();
+}
+
+function openMenu(){document.getElementById('drawer').classList.add('open');document.getElementById('overlay').classList.add('open');renderAdmin();loadNotificationSettings()}
+function closeMenu(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('open')}
+function renderAdmin(){
+ const box=document.getElementById('adminList');
+ if(!data.length){box.innerHTML='<div class="empty">Aucune donnée enregistrée.</div>';return}
+ box.innerHTML=data.map((x,i)=>`<div class="adminItem"><button class="del" onclick="deleteEntry(${i})">Supprimer</button><b>${esc(x.app)}</b><div class="meta">${x.date} · ${fmt(x.minutes)}</div></div>`).join('');
+}
+function deleteEntry(i){
+ data.splice(i,1);
+ localStorage.setItem('screenTime',JSON.stringify(data));
+ render();
+ renderAdmin();
+}
+
+function loadNotificationSettings(){
+ const t=localStorage.getItem('notifyTime')||'20:00';
+ const input=document.getElementById('notifyTime'); if(input) input.value=t;
+ const enabled=localStorage.getItem('notifyEnabled')==='1';
+ const status=document.getElementById('notifyStatus');
+ if(status) status.textContent=enabled?'Rappel activé à '+t+'.':'Rappel désactivé.';
+}
+async function enableNotifications(){
+ if(!('Notification' in window)){alert('Les notifications ne sont pas disponibles dans ce navigateur.');return}
+ const permission=await Notification.requestPermission();
+ if(permission!=='granted'){document.getElementById('notifyStatus').textContent='Autorisation des notifications refusée.';return}
+ const t=document.getElementById('notifyTime').value||'20:00';
+ localStorage.setItem('notifyTime',t);localStorage.setItem('notifyEnabled','1');
+ document.getElementById('notifyStatus').textContent='Rappel activé à '+t+'.';
+ scheduleReminder();
+}
+function scheduleReminder(){
+ if(window._reminderTimer) clearInterval(window._reminderTimer);
+ if(localStorage.getItem('notifyEnabled')!=='1') return;
+ window._reminderTimer=setInterval(()=>{
+   const t=localStorage.getItem('notifyTime')||'20:00', now=new Date();
+   const current=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+   const last=localStorage.getItem('lastReminderDate'), todayKey=now.toISOString().slice(0,10);
+   if(current===t && last!==todayKey && Notification.permission==='granted'){
+     new Notification('SweetTime ⏱️',{body:'N’oublie pas d’ajouter tes temps d’écran de la journée.'});
+     localStorage.setItem('lastReminderDate',todayKey);
+   }
+ },30000);
+}
+function render(){
+ let arr=data.filter(inPeriod), apps={};arr.forEach(x=>apps[x.app]=(apps[x.app]||0)+x.minutes);
+ let total=arr.reduce((s,x)=>s+x.minutes,0);
+ let days=period==='jour'?1:period==='semaine'?7:period==='mois'?new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate():365;
+ document.getElementById('total').textContent=fmt(total);
+ document.getElementById('average').textContent=fmt(total/days);
+ document.getElementById('periodTitle').textContent='Temps '+period;
+ let labels=Object.keys(apps),vals=labels.map(x=>apps[x]);
+ document.getElementById('chartEmpty').classList.toggle('hidden',labels.length>0);
+ document.getElementById('chart').classList.toggle('hidden',labels.length===0);
+ if(chart)chart.destroy();
+ if(labels.length)chart=new Chart(document.getElementById('chart'),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:['#208b43','#43a95f','#76c893','#95d5b2','#b7e4c7','#2d6a4f','#52b788','#40916c','#74c69d','#1b4332']}]},options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}},onClick:(e,els)=>{}}});
+ let detail=document.getElementById('details');
+ if(!labels.length){detail.innerHTML='<div class="empty">Aucune donnée pour cette période.</div>';return}
+ detail.innerHTML=labels.sort((a,b)=>apps[b]-apps[a]).map(a=>`<div class="app"><div class="row"><b>${esc(a)}</b><b>${fmt(apps[a])}</b></div></div>`).join('');
+}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function clearAll(){
+ data=[];
+ localStorage.removeItem('screenTime');
+ render();
+ renderAdmin();
+}
+render();
+scheduleReminder();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+}
+</script>
+</body>
+</html>
